@@ -45,6 +45,5 @@ flutter {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
-    implementation("com.github.pedroSG94.RootEncoder:library:2.6.7")
-    implementation("com.github.pedroSG94.RootEncoder:rtmp:2.6.7")
+    implementation(project(":rtmpstreamer"))
 }

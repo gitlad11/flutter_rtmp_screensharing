@@ -1,4 +1,4 @@
-package com.example.flutter_rtmp_screensharing
+package com.gitlad.rtmpstreamer.preview
 
 import android.content.Context
 import android.util.AttributeSet
@@ -9,13 +9,8 @@ class AspectRatioTextureView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : TextureView(context, attrs) {
 
-    private var ratioWidth = 0
-    private var ratioHeight = 0
-
     fun setAspectRatio(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
-        ratioWidth = width
-        ratioHeight = height
         requestLayout()
     }
 

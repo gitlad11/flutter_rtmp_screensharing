@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+import 'native_rtmp_controller.dart';
 
 void main() {
   runApp(const RtmpDemoApp());
@@ -37,15 +39,21 @@ class RtmpHomePage extends StatefulWidget {
 }
 
 class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver {
-  static const _channel = MethodChannel('screen_share_channel');
   static const _nativeCameraPreviewType = 'native_camera_preview';
-  static const _defaultRtmpUrl = 'rtmp://192.168.101.116:1935/live/test';
-  static const _watchUrl = 'http://192.168.101.116:8888/live/test/';
+  static const _defaultRtmpUrl = 'rtmp://192.168.101.117:1935/live/test';
+  static const _watchUrl = 'http://192.168.101.117:8888/live/test/';
+  static const _settings = RtmpStreamSettings(
+    width: 1280,
+    height: 720,
+    fps: 30,
+    bitrate: 2500000,
+  );
 
   final _urlController = TextEditingController(text: _defaultRtmpUrl);
+  StreamSubscription<NativeRtmpEvent>? _eventSubscription;
 
   String _status = 'Готово к превью';
-  String _source = 'camera';
+  RtmpSource _source = RtmpSource.camera;
   bool _isPreviewStarted = false;
   bool _isStreaming = false;
   bool _isMuted = false;
@@ -55,7 +63,7 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _channel.setMethodCallHandler(_handleNativeEvent);
+    _eventSubscription = NativeRtmpController.events.listen(_handleNativeEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultSettings();
       _startPreview();
@@ -65,8 +73,9 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _eventSubscription?.cancel();
     _urlController.dispose();
-    _channel.invokeMethod<void>('release');
+    NativeRtmpController.release();
     super.dispose();
   }
 
@@ -77,21 +86,18 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
     }
   }
 
-  Future<dynamic> _handleNativeEvent(MethodCall call) async {
-    if (call.method != 'onNativeEvent') return null;
-    final data = Map<Object?, Object?>.from(call.arguments as Map);
-    final type = data['type']?.toString() ?? 'event';
-    final message = data['message']?.toString();
+  void _handleNativeEvent(NativeRtmpEvent event) {
+    if (!mounted) return;
 
     setState(() {
-      switch (type) {
+      switch (event.type) {
         case 'preview_started':
           _isPreviewStarted = true;
-          _source = message ?? _source;
+          _source = RtmpSource.fromValue(event.message);
           _status = 'Превью камеры запущено';
           break;
         case 'connecting':
-          _status = 'Подключение к $message';
+          _status = 'Подключение к ${event.message}';
           break;
         case 'connected':
           _isStreaming = true;
@@ -99,7 +105,7 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
           break;
         case 'started':
           _isStreaming = true;
-          _source = message ?? _source;
+          _source = RtmpSource.fromValue(event.message);
           _status = 'RTMP отправляется';
           break;
         case 'stopped':
@@ -108,30 +114,26 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
           _status = 'Стрим остановлен';
           break;
         case 'source_changed':
-          _source = message ?? _source;
-          _status = _source == 'screen' ? 'Источник: экран' : 'Источник: камера';
+          _source = RtmpSource.fromValue(event.message);
+          _status = _source == RtmpSource.screen ? 'Источник: экран' : 'Источник: камера';
+          break;
+        case 'bitrate':
+          _status = 'Битрейт: ${event.message} bit/s';
           break;
         case 'failed':
         case 'error':
           _isStreaming = false;
-          _status = message == null ? 'Ошибка RTMP' : 'Ошибка: $message';
+          _status = event.message == null ? 'Ошибка RTMP' : 'Ошибка: ${event.message}';
           break;
         default:
-          _status = message == null ? type : '$type: $message';
+          _status = event.message == null ? event.type : '${event.type}: ${event.message}';
           break;
       }
     });
-    return null;
   }
 
   Future<void> _applyDefaultSettings() {
-    return _channel.invokeMethod<void>('updateStreamSettings', const {
-      'width': 1280,
-      'height': 720,
-      'fps': 30,
-      'bitrate': 2500000,
-      'orientation': 'landscape',
-    });
+    return NativeRtmpController.updateStreamSettings(_settings);
   }
 
   Future<void> _startPreview() async {
@@ -143,15 +145,15 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
 
     try {
       await _applyDefaultSettings();
-      final ok = await _channel.invokeMethod<bool>('startPreviewCamera') ?? false;
+      final ok = await NativeRtmpController.startPreviewCamera();
       setState(() {
         _isPreviewStarted = ok;
         _status = ok
             ? 'Превью камеры запущено'
             : 'Разрешите камеру/микрофон и нажмите превью еще раз';
       });
-    } on PlatformException catch (e) {
-      setState(() => _status = e.message ?? 'Не удалось запустить превью');
+    } catch (e) {
+      setState(() => _status = 'Не удалось запустить превью: $e');
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
@@ -172,21 +174,21 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
 
     try {
       await _applyDefaultSettings();
-      if (!_isPreviewStarted) await _channel.invokeMethod<bool>('startPreviewCamera');
-      final ok = await _channel.invokeMethod<bool>('startStream', {'url': url}) ?? false;
+      if (!_isPreviewStarted) await NativeRtmpController.startPreviewCamera();
+      final ok = await NativeRtmpController.startStream(url);
       setState(() {
         _isStreaming = ok;
         _status = ok ? 'RTMP отправляется' : 'Не удалось стартовать RTMP';
       });
-    } on PlatformException catch (e) {
-      setState(() => _status = e.message ?? 'Ошибка старта RTMP');
+    } catch (e) {
+      setState(() => _status = 'Ошибка старта RTMP: $e');
     } finally {
       if (mounted) setState(() => _isBusy = false);
     }
   }
 
   Future<void> _stopStream() async {
-    await _channel.invokeMethod<bool>('stopStream');
+    await NativeRtmpController.stopStream();
     setState(() {
       _isStreaming = false;
       _status = 'Стрим остановлен';
@@ -194,24 +196,27 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
   }
 
   Future<void> _switchCamera() async {
-    final ok = await _channel.invokeMethod<bool>('switchCamera') ?? false;
+    final ok = await NativeRtmpController.switchCamera();
     setState(() => _status = ok ? 'Камера переключена' : 'Камера пока недоступна');
   }
 
   Future<void> _toggleMute() async {
-    final muted = await _channel.invokeMethod<bool>('toggleMute') ?? _isMuted;
+    final muted = await NativeRtmpController.toggleMute();
     setState(() {
       _isMuted = muted;
       _status = muted ? 'Микрофон выключен' : 'Микрофон включен';
     });
   }
 
-  Future<void> _switchSource(String source) async {
-    final ok = await _channel.invokeMethod<bool>('switchSource', source) ?? false;
+  Future<void> _switchSource(RtmpSource source) async {
+    final ok = source == RtmpSource.screen
+        ? await NativeRtmpController.startPreviewScreen()
+        : await NativeRtmpController.switchSource(source);
+
     setState(() {
       if (ok) _source = source;
       _status = ok
-          ? (source == 'screen' ? 'Подтвердите захват экрана' : 'Источник: камера')
+          ? (source == RtmpSource.screen ? 'Подтвердите захват экрана' : 'Источник: камера')
           : 'Не удалось сменить источник';
     });
   }
@@ -252,7 +257,7 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
               keyboardType: TextInputType.url,
               decoration: const InputDecoration(
                 labelText: 'RTMP publish URL',
-                helperText: 'Для просмотра откройте http://localhost:8888/live/test/',
+                helperText: 'Для просмотра откройте http://192.168.101.116:8888/live/test/',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -279,7 +284,7 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
                   label: const Text('Стоп'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: _source == 'camera' ? _switchCamera : null,
+                  onPressed: _source == RtmpSource.camera ? _switchCamera : null,
                   icon: const Icon(Icons.cameraswitch),
                   label: const Text('Камера'),
                 ),
@@ -291,15 +296,15 @@ class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver
               ],
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
+            SegmentedButton<RtmpSource>(
               segments: const [
                 ButtonSegment(
-                  value: 'camera',
+                  value: RtmpSource.camera,
                   icon: Icon(Icons.photo_camera),
                   label: Text('Камера'),
                 ),
                 ButtonSegment(
-                  value: 'screen',
+                  value: RtmpSource.screen,
                   icon: Icon(Icons.screen_share),
                   label: Text('Экран'),
                 ),
@@ -336,9 +341,9 @@ class _StatusPill extends StatelessWidget {
         child: Text(
           isLive ? 'LIVE' : 'IDLE',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

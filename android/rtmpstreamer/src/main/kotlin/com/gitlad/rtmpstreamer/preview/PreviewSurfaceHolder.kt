@@ -1,8 +1,8 @@
-package com.example.flutter_rtmp_screensharing
+package com.gitlad.rtmpstreamer.preview
 
 import android.view.TextureView
 
-object NativePreviewHolder {
+object PreviewSurfaceHolder {
     @Volatile var cameraView: TextureView? = null
     @Volatile var screenView: TextureView? = null
     @Volatile var targetPreviewWidth: Int = 1280
@@ -16,4 +16,10 @@ object NativePreviewHolder {
     @Volatile var cameraAttached: Boolean = false
     @Volatile var previewStartRequested: Boolean = false
     val lock = Object()
+
+    fun updateTargetPreviewSize(width: Int, height: Int) {
+        targetPreviewWidth = width
+        targetPreviewHeight = height
+        (cameraView as? AspectRatioTextureView)?.setAspectRatio(width, height)
+    }
 }

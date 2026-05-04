@@ -5,6 +5,8 @@ import android.graphics.SurfaceTexture
 import android.util.Log
 import android.view.TextureView
 import android.view.View
+import com.gitlad.rtmpstreamer.preview.AspectRatioTextureView
+import com.gitlad.rtmpstreamer.preview.PreviewSurfaceHolder
 import io.flutter.plugin.platform.PlatformView
 
 class NativePreview(
@@ -33,18 +35,18 @@ class NativePreview(
         }
 
         override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-            synchronized(NativePreviewHolder.lock) {
+            synchronized(PreviewSurfaceHolder.lock) {
                 if (kind == "camera") {
-                    NativePreviewHolder.cameraReady = false
-                    NativePreviewHolder.cameraWidth = 0
-                    NativePreviewHolder.cameraHeight = 0
-                    NativePreviewHolder.cameraAttached = false
+                    PreviewSurfaceHolder.cameraReady = false
+                    PreviewSurfaceHolder.cameraWidth = 0
+                    PreviewSurfaceHolder.cameraHeight = 0
+                    PreviewSurfaceHolder.cameraAttached = false
                 } else {
-                    NativePreviewHolder.screenReady = false
-                    NativePreviewHolder.screenWidth = 0
-                    NativePreviewHolder.screenHeight = 0
+                    PreviewSurfaceHolder.screenReady = false
+                    PreviewSurfaceHolder.screenWidth = 0
+                    PreviewSurfaceHolder.screenHeight = 0
                 }
-                NativePreviewHolder.lock.notifyAll()
+                PreviewSurfaceHolder.lock.notifyAll()
             }
             return true
         }
@@ -66,38 +68,38 @@ class NativePreview(
 
         textureView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                synchronized(NativePreviewHolder.lock) {
+                synchronized(PreviewSurfaceHolder.lock) {
                     if (kind == "camera") {
-                        NativePreviewHolder.cameraAttached = true
+                        PreviewSurfaceHolder.cameraAttached = true
                     }
-                    NativePreviewHolder.lock.notifyAll()
+                    PreviewSurfaceHolder.lock.notifyAll()
                 }
                 maybeDispatchCameraReady()
             }
 
             override fun onViewDetachedFromWindow(v: View) {
-                synchronized(NativePreviewHolder.lock) {
+                synchronized(PreviewSurfaceHolder.lock) {
                     if (kind == "camera") {
-                        NativePreviewHolder.cameraAttached = false
-                        NativePreviewHolder.cameraReady = false
+                        PreviewSurfaceHolder.cameraAttached = false
+                        PreviewSurfaceHolder.cameraReady = false
                     }
-                    NativePreviewHolder.lock.notifyAll()
+                    PreviewSurfaceHolder.lock.notifyAll()
                 }
             }
         })
 
-        synchronized(NativePreviewHolder.lock) {
+        synchronized(PreviewSurfaceHolder.lock) {
             if (kind == "camera") {
-                NativePreviewHolder.cameraView = textureView
-                NativePreviewHolder.cameraReady = false
-                NativePreviewHolder.cameraWidth = textureView.width
-                NativePreviewHolder.cameraHeight = textureView.height
-                NativePreviewHolder.cameraAttached = textureView.isAttachedToWindow
+                PreviewSurfaceHolder.cameraView = textureView
+                PreviewSurfaceHolder.cameraReady = false
+                PreviewSurfaceHolder.cameraWidth = textureView.width
+                PreviewSurfaceHolder.cameraHeight = textureView.height
+                PreviewSurfaceHolder.cameraAttached = textureView.isAttachedToWindow
             } else {
-                NativePreviewHolder.screenView = textureView
-                NativePreviewHolder.screenReady = false
-                NativePreviewHolder.screenWidth = textureView.width
-                NativePreviewHolder.screenHeight = textureView.height
+                PreviewSurfaceHolder.screenView = textureView
+                PreviewSurfaceHolder.screenReady = false
+                PreviewSurfaceHolder.screenWidth = textureView.width
+                PreviewSurfaceHolder.screenHeight = textureView.height
             }
         }
     }
@@ -106,45 +108,45 @@ class NativePreview(
 
     override fun dispose() {
         textureView.surfaceTextureListener = null
-        synchronized(NativePreviewHolder.lock) {
+        synchronized(PreviewSurfaceHolder.lock) {
             if (kind == "camera") {
-                NativePreviewHolder.cameraReady = false
-                NativePreviewHolder.cameraWidth = 0
-                NativePreviewHolder.cameraHeight = 0
-                NativePreviewHolder.cameraAttached = false
-                if (NativePreviewHolder.cameraView === textureView) NativePreviewHolder.cameraView = null
+                PreviewSurfaceHolder.cameraReady = false
+                PreviewSurfaceHolder.cameraWidth = 0
+                PreviewSurfaceHolder.cameraHeight = 0
+                PreviewSurfaceHolder.cameraAttached = false
+                if (PreviewSurfaceHolder.cameraView === textureView) PreviewSurfaceHolder.cameraView = null
             } else {
-                NativePreviewHolder.screenReady = false
-                NativePreviewHolder.screenWidth = 0
-                NativePreviewHolder.screenHeight = 0
-                if (NativePreviewHolder.screenView === textureView) NativePreviewHolder.screenView = null
+                PreviewSurfaceHolder.screenReady = false
+                PreviewSurfaceHolder.screenWidth = 0
+                PreviewSurfaceHolder.screenHeight = 0
+                if (PreviewSurfaceHolder.screenView === textureView) PreviewSurfaceHolder.screenView = null
             }
-            NativePreviewHolder.lock.notifyAll()
+            PreviewSurfaceHolder.lock.notifyAll()
         }
     }
 
     private fun updateState(width: Int, height: Int) {
-        synchronized(NativePreviewHolder.lock) {
+        synchronized(PreviewSurfaceHolder.lock) {
             val ready = textureView.isAvailable && width > 0 && height > 0
             if (kind == "camera") {
-                NativePreviewHolder.cameraReady = ready
-                NativePreviewHolder.cameraWidth = width
-                NativePreviewHolder.cameraHeight = height
-                NativePreviewHolder.cameraAttached = textureView.isAttachedToWindow
+                PreviewSurfaceHolder.cameraReady = ready
+                PreviewSurfaceHolder.cameraWidth = width
+                PreviewSurfaceHolder.cameraHeight = height
+                PreviewSurfaceHolder.cameraAttached = textureView.isAttachedToWindow
             } else {
-                NativePreviewHolder.screenReady = ready
-                NativePreviewHolder.screenWidth = width
-                NativePreviewHolder.screenHeight = height
+                PreviewSurfaceHolder.screenReady = ready
+                PreviewSurfaceHolder.screenWidth = width
+                PreviewSurfaceHolder.screenHeight = height
             }
-            NativePreviewHolder.lock.notifyAll()
+            PreviewSurfaceHolder.lock.notifyAll()
         }
     }
 
     private fun updateAspectRatio(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
         if (kind == "camera") {
-            val targetWidth = NativePreviewHolder.targetPreviewWidth
-            val targetHeight = NativePreviewHolder.targetPreviewHeight
+            val targetWidth = PreviewSurfaceHolder.targetPreviewWidth
+            val targetHeight = PreviewSurfaceHolder.targetPreviewHeight
             if (targetWidth > 0 && targetHeight > 0) {
                 textureView.setAspectRatio(targetWidth, targetHeight)
             } else if (height >= width) {
@@ -161,14 +163,14 @@ class NativePreview(
         if (kind != "camera" || onCameraPreviewReady == null) return
 
         textureView.postDelayed({
-            val shouldDispatch = synchronized(NativePreviewHolder.lock) {
+            val shouldDispatch = synchronized(PreviewSurfaceHolder.lock) {
                 val isStable = textureView.isAvailable &&
                     textureView.isAttachedToWindow &&
                     textureView.width > 0 &&
                     textureView.height > 0
 
-                if (isStable && !NativePreviewHolder.previewStartRequested) {
-                    NativePreviewHolder.previewStartRequested = true
+                if (isStable && !PreviewSurfaceHolder.previewStartRequested) {
+                    PreviewSurfaceHolder.previewStartRequested = true
                     true
                 } else {
                     false
