@@ -18,6 +18,7 @@ class RtmpStreamingClient(
     private var cameraSource: Camera2Source? = null
     private var microphoneSource: MicrophoneSource? = null
     private var rawFrameListener: RawFrameListener? = null
+    private var rawFrameChunker: RawFrameChunker? = null
     private val rawFrameRecordController = RawFrameRecordController { rawFrameListener }
 
     var source: StreamSource = StreamSource.CAMERA
@@ -31,18 +32,32 @@ class RtmpStreamingClient(
     private var audioPrepared = false
 
     fun updateSettings(next: StreamSettings) {
-        settings = next
+        settings = next.copy(rotationDegrees = normalizeRotationDegrees(next.rotationDegrees))
         val active = stream?.isStreaming == true || stream?.isOnPreview == true
         if (!active) {
             videoPrepared = false
             audioPrepared = false
+        } else {
+            stream?.setOrientation(settings.rotationDegrees)
         }
 
         Log.d(
             TAG,
-            "Updated stream settings: ${next.width}x${next.height} @ ${next.fps}fps ${next.bitrate}bps" +
+            "Updated stream settings: ${next.width}x${next.height} @ ${next.fps}fps ${next.bitrate}bps rotation=${settings.rotationDegrees}" +
                 if (active) " (deferred until next prepare)" else "",
         )
+    }
+
+    fun setCameraOrientation(
+        orientation: StreamOrientation,
+        rotationDegrees: Int = orientation.defaultRotationDegrees,
+    ) {
+        settings = settings.copy(
+            orientation = orientation,
+            rotationDegrees = normalizeRotationDegrees(rotationDegrees),
+        )
+        stream?.setOrientation(settings.rotationDegrees)
+        emit("orientation_changed", "${orientation.channelValue}:${settings.rotationDegrees}")
     }
 
     fun startPreview(view: TextureView): Boolean {
@@ -135,6 +150,26 @@ class RtmpStreamingClient(
         stream?.setRecordController(rawFrameRecordController)
     }
 
+    fun setRawFrameChunkListener(
+        listener: RawFrameChunkListener?,
+        maxDurationUs: Long = 2_000_000L,
+        maxBytes: Int = 2 * 1024 * 1024,
+    ) {
+        rawFrameChunker?.flush()
+        rawFrameChunker = listener?.let {
+            RawFrameChunker(
+                maxDurationUs = maxDurationUs,
+                maxBytes = maxBytes,
+                listener = it,
+            )
+        }
+        setRawFrameListener(rawFrameChunker)
+    }
+
+    fun flushRawFrameChunk() {
+        rawFrameChunker?.flush()
+    }
+
     fun isStreaming(): Boolean = stream?.isStreaming == true
 
     fun isOnPreview(): Boolean = stream?.isOnPreview == true
@@ -146,6 +181,9 @@ class RtmpStreamingClient(
         microphoneSource = null
         videoPrepared = false
         audioPrepared = false
+        rawFrameChunker?.flush()
+        rawFrameChunker = null
+        rawFrameListener = null
         source = StreamSource.CAMERA
         isMuted = false
     }
@@ -162,7 +200,7 @@ class RtmpStreamingClient(
 
     private fun prepareStreamIfNeeded(stream: RtmpStream): Boolean {
         if (!videoPrepared) {
-            val rotation = if (settings.isPortrait) 90 else 0
+            val rotation = settings.rotationDegrees
             val encWidth = if (settings.isPortrait) maxOf(settings.width, settings.height) else settings.width
             val encHeight = if (settings.isPortrait) minOf(settings.width, settings.height) else settings.height
             val preferred = VideoProfile(encWidth, encHeight, settings.fps, settings.bitrate)

@@ -80,6 +80,20 @@ class MainActivity : FlutterActivity(), StreamEventListener {
                     }
                 }
 
+                "setCameraOrientation" -> {
+                    val args = call.arguments as? Map<*, *>
+                    if (args == null) {
+                        result.error("BAD_ARGS", "Orientation map required", null)
+                    } else {
+                        val orientation = StreamOrientation.fromChannelValue(args["orientation"] as? String)
+                        val rotation = (args["rotationDegrees"] as? Number)
+                            ?.toInt()
+                            ?: orientation.defaultRotationDegrees
+                        streamingClient.setCameraOrientation(orientation, rotation)
+                        result.success(true)
+                    }
+                }
+
                 "stopStream" -> {
                     streamingClient.stopStream()
                     result.success(true)
@@ -229,11 +243,7 @@ class MainActivity : FlutterActivity(), StreamEventListener {
     }
 
     private fun Map<*, *>.toStreamSettings(): StreamSettings {
-        val orientation = if (this["orientation"] as? String == "portrait") {
-            StreamOrientation.PORTRAIT
-        } else {
-            StreamOrientation.LANDSCAPE
-        }
+        val orientation = StreamOrientation.fromChannelValue(this["orientation"] as? String)
 
         return StreamSettings(
             width = (this["width"] as? Number)?.toInt()?.takeIf { it > 0 } ?: 1280,
@@ -241,6 +251,9 @@ class MainActivity : FlutterActivity(), StreamEventListener {
             bitrate = (this["bitrate"] as? Number)?.toInt()?.takeIf { it > 0 } ?: 4_000_000,
             fps = (this["fps"] as? Number)?.toInt()?.takeIf { it > 0 } ?: 30,
             orientation = orientation,
+            rotationDegrees = (this["rotationDegrees"] as? Number)
+                ?.toInt()
+                ?: orientation.defaultRotationDegrees,
         )
     }
 

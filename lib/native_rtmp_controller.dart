@@ -38,6 +38,16 @@ class NativeRtmpController {
     return _channel.invokeMethod<void>('updateStreamSettings', settings);
   }
 
+  static Future<bool> setCameraOrientation(
+    RtmpOrientation orientation, {
+    int? rotationDegrees,
+  }) async {
+    return await _invokeBool('setCameraOrientation', {
+      'orientation': orientation.value,
+      'rotationDegrees': rotationDegrees ?? orientation.defaultRotationDegrees,
+    });
+  }
+
   static Future<void> stopStream() {
     return _channel.invokeMethod<void>('stopStream');
   }
@@ -130,6 +140,7 @@ class RtmpStreamSettings {
     this.fps = 30,
     this.bitrate = 2500000,
     this.orientation = RtmpOrientation.landscape,
+    this.rotationDegrees,
   });
 
   final int width;
@@ -137,6 +148,7 @@ class RtmpStreamSettings {
   final int fps;
   final int bitrate;
   final RtmpOrientation orientation;
+  final int? rotationDegrees;
 
   Map<String, dynamic> toJson() {
     return {
@@ -145,6 +157,7 @@ class RtmpStreamSettings {
       'fps': fps,
       'bitrate': bitrate,
       'orientation': orientation.value,
+      'rotationDegrees': rotationDegrees ?? orientation.defaultRotationDegrees,
     };
   }
 }
@@ -166,10 +179,11 @@ enum RtmpSource {
 }
 
 enum RtmpOrientation {
-  landscape('landscape'),
-  portrait('portrait');
+  landscape('landscape', 0),
+  portrait('portrait', 90);
 
-  const RtmpOrientation(this.value);
+  const RtmpOrientation(this.value, this.defaultRotationDegrees);
 
   final String value;
+  final int defaultRotationDegrees;
 }
