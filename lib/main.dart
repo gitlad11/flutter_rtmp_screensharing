@@ -40,8 +40,8 @@ class RtmpHomePage extends StatefulWidget {
 
 class _RtmpHomePageState extends State<RtmpHomePage> with WidgetsBindingObserver {
   static const _nativeCameraPreviewType = 'native_camera_preview';
-  static const _defaultRtmpUrl = 'rtmp://192.168.101.117:1935/live/test';
-  static const _watchUrl = 'http://192.168.101.117:8888/live/test/';
+  static const _defaultRtmpUrl = 'rtmp://10.0.2.2:1935/live/test';
+  static const _watchUrl = 'http://localhost:8888/live/test/';
   static const _settings = RtmpStreamSettings(
     width: 1280,
     height: 720,

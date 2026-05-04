@@ -125,7 +125,7 @@ client.updateSettings(
 )
 
 client.startPreview(textureView)
-client.startStream("rtmp://192.168.101.117:1935/live/test")
+client.startStream("rtmp://<host-ip>:1935/live/test")
 ```
 
 Stop and release:
@@ -274,7 +274,7 @@ await NativeRtmpController.updateStreamSettings(
 );
 
 await NativeRtmpController.startPreviewCamera();
-await NativeRtmpController.startStream('rtmp://192.168.101.117:1935/live/test');
+await NativeRtmpController.startStream('rtmp://<host-ip>:1935/live/test');
 ```
 
 Listen to native events:
@@ -314,7 +314,7 @@ rtmp://10.0.2.2:1935/live/test
 For a physical phone, use the computer LAN IP, for example:
 
 ```text
-rtmp://192.168.101.117:1935/live/test
+rtmp://<host-ip>:1935/live/test
 ```
 
 The phone and computer must be on the same network, and firewall rules must allow ports `1935` and `8888`.
@@ -334,6 +334,33 @@ The phone and computer must be on the same network, and firewall rules must allo
 - Package the Flutter bridge as a plugin if the library should be consumed directly from Flutter.
 
 ## Publishing
+
+Flutter plugin package:
+
+```text
+packages/rtmpstreamer
+```
+
+Use it from Git before publishing to pub.dev:
+
+```yaml
+dependencies:
+  rtmpstreamer:
+    git:
+      url: https://github.com/gitlad11/flutter_rtmp_screensharing.git
+      path: packages/rtmpstreamer
+      ref: v0.1.0
+```
+
+Publish the Flutter plugin to pub.dev:
+
+```powershell
+cd packages/rtmpstreamer
+flutter pub publish --dry-run
+flutter pub publish
+```
+
+The package name `rtmpstreamer` must be available on pub.dev at publish time. If pub.dev rejects it as already taken, rename `name:` in `packages/rtmpstreamer/pubspec.yaml`.
 
 Check local Maven publication:
 
