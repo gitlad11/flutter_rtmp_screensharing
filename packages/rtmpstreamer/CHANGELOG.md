@@ -1,3 +1,9 @@
+## 0.1.1
+
+- Improve pub.dev metadata and README for RTMP screen sharing discovery.
+- Document on-the-fly camera to screen sharing switching.
+- Add clearer search terms for Flutter RTMP streaming with MediaProjection.
+
 ## 0.1.0
 
 - Initial Android implementation.

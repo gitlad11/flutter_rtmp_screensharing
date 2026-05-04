@@ -1,6 +1,16 @@
 # rtmpstreamer
 
-Flutter plugin for Android RTMP streaming with camera preview, screen sharing, orientation control, native events, raw encoded frames, and chunked frame capture support on Android.
+Flutter Android RTMP streaming with camera preview and on-the-fly screen sharing.
+
+`rtmpstreamer` is built for Flutter apps that need RTMP live streaming with runtime switching between the camera and Android screen sharing. You can start a camera RTMP stream, keep the same RTMP session running, and switch to screen sharing through MediaProjection when the user needs to share the device screen.
+
+Use it when people search for:
+
+- Flutter RTMP streaming with screen sharing
+- RTMP screen share Flutter
+- Android MediaProjection RTMP streaming
+- Flutter live streaming camera to screen share
+- on-the-fly camera to screen sharing RTMP
 
 Current platform support:
 
@@ -18,15 +28,29 @@ dependencies:
     git:
       url: https://github.com/gitlad11/flutter_rtmp_screensharing.git
       path: packages/rtmpstreamer
-      ref: v0.1.0
+      ref: v0.1.1
 ```
 
 After publishing on pub.dev:
 
 ```yaml
 dependencies:
-  rtmpstreamer: ^0.1.0
+  rtmpstreamer: ^0.1.1
 ```
+
+## Features
+
+- RTMP publishing from Flutter on Android.
+- Native camera preview widget.
+- Microphone audio capture.
+- On-the-fly switching from camera stream to screen sharing.
+- Android MediaProjection screen capture support.
+- Camera switching.
+- Mute/unmute microphone.
+- Stream orientation and rotation control.
+- Native stream events: connecting, connected, started, failed, bitrate, stopped.
+- Android raw encoded H264/AAC frame access.
+- Android chunked encoded frame capture for recording/upload pipelines.
 
 ## Android Permissions
 
@@ -104,13 +128,19 @@ Mute:
 final muted = await RtmpStreamer.toggleMute();
 ```
 
-Screen sharing:
+On-the-fly screen sharing:
 
 ```dart
-await RtmpStreamer.startPreviewScreen();
+await RtmpStreamer.switchSource(RtmpSource.screen);
 ```
 
-Android will show the MediaProjection consent dialog.
+Android will show the MediaProjection consent dialog. After approval, the native Android layer switches the active stream source from camera to screen sharing.
+
+Switch back to camera:
+
+```dart
+await RtmpStreamer.switchSource(RtmpSource.camera);
+```
 
 Orientation:
 
