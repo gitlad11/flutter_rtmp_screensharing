@@ -4,14 +4,6 @@ Flutter Android RTMP streaming with camera preview and on-the-fly screen sharing
 
 `rtmpstreamer` is built for Flutter apps that need RTMP live streaming with runtime switching between the camera and Android screen sharing. You can start a camera RTMP stream, keep the same RTMP session running, and switch to screen sharing through MediaProjection when the user needs to share the device screen.
 
-Use it when people search for:
-
-- Flutter RTMP streaming with screen sharing
-- RTMP screen share Flutter
-- Android MediaProjection RTMP streaming
-- Flutter live streaming camera to screen share
-- on-the-fly camera to screen sharing RTMP
-
 Current platform support:
 
 ```text
@@ -19,6 +11,13 @@ Android only
 ```
 
 ## Install
+
+From pub.dev:
+
+```yaml
+dependencies:
+  rtmpstreamer: ^0.1.2
+```
 
 From Git:
 
@@ -28,14 +27,30 @@ dependencies:
     git:
       url: https://github.com/gitlad11/flutter_rtmp_screensharing.git
       path: packages/rtmpstreamer
-      ref: v0.1.1
+      ref: main
 ```
 
-After publishing on pub.dev:
+The Android implementation uses PedroSG94 RootEncoder. Gradle downloads it
+automatically from JitPack when the Android app is built. Add JitPack to the
+repositories in your Flutter app if it is not already available.
 
-```yaml
-dependencies:
-  rtmpstreamer: ^0.1.1
+For Kotlin DSL projects, add it to `android/settings.gradle.kts`:
+
+```kotlin
+dependencyResolutionManagement {
+  repositories {
+    google()
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+  }
+}
+```
+
+For Groovy projects, add this line to the repositories block in
+`android/build.gradle`:
+
+```gradle
+maven { url 'https://jitpack.io' }
 ```
 
 ## Features
@@ -54,7 +69,10 @@ dependencies:
 
 ## Android Permissions
 
-The plugin manifest declares the required permissions and foreground service. Your app still needs to request runtime permissions when Android asks for them.
+The plugin manifest declares the required permissions and foreground service.
+The plugin requests camera and microphone permissions before starting the
+camera preview. On Android 13 and newer, the host app should request notification
+permission when appropriate for its UX.
 
 Required capabilities:
 
@@ -152,6 +170,12 @@ await RtmpStreamer.setCameraOrientation(
 ```
 
 ## MediaMTX Test
+
+For a quick local RTMP server with HLS playback:
+
+```bash
+docker run --rm -p 1935:1935 -p 8888:8888 bluenviron/mediamtx:latest
+```
 
 Publish URL:
 

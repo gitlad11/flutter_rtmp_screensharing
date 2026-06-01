@@ -1,3 +1,9 @@
+## 0.1.2
+
+- Preserve the configured aspect ratio in the native Android camera preview.
+- Apply portrait preview dimensions consistently with the encoder orientation.
+- Document JitPack setup for the PedroSG94 RootEncoder Android dependencies.
+
 ## 0.1.1
 
 - Improve pub.dev metadata and README for RTMP screen sharing discovery.

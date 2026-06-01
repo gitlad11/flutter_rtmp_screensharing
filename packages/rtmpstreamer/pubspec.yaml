@@ -1,6 +1,6 @@
 name: rtmpstreamer
 description: Flutter Android RTMP streaming plugin with camera preview and on-the-fly screen sharing via MediaProjection.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/gitlad11/flutter_rtmp_screensharing
 repository: https://github.com/gitlad11/flutter_rtmp_screensharing
 issue_tracker: https://github.com/gitlad11/flutter_rtmp_screensharing/issues

@@ -245,7 +245,9 @@ class RtmpStreamerPlugin :
 
     private fun applyStreamSettings(settings: StreamSettings) {
         settingsReceived = true
-        PreviewSurfaceHolder.updateTargetPreviewSize(settings.width, settings.height)
+        val previewWidth = if (settings.isPortrait) settings.height else settings.width
+        val previewHeight = if (settings.isPortrait) settings.width else settings.height
+        PreviewSurfaceHolder.updateTargetPreviewSize(previewWidth, previewHeight)
         streamingClient.updateSettings(settings)
     }
 
