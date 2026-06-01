@@ -1,3 +1,8 @@
+## 0.2.1
+
+- Add Web combined screen sharing and camera overlay source.
+- Keep camera switching available for the combined Web overlay.
+
 ## 0.2.0
 
 - Added Web implementation.

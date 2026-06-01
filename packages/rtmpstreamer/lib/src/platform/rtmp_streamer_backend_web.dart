@@ -34,6 +34,11 @@ class _WebRtmpStreamerBackend implements RtmpStreamerBackend {
   bool _isStreaming = false;
   bool _isMuted = false;
   bool _frontCamera = false;
+  web.MediaStreamTrack? _combinedScreenTrack;
+  web.MediaStreamTrack? _combinedCameraTrack;
+  web.MediaStreamTrack? _combinedCanvasTrack;
+  web.HTMLVideoElement? _combinedCameraVideo;
+  int? _combinedAnimationFrame;
 
   @override
   Future<bool> startPreviewCamera() async {
@@ -194,6 +199,7 @@ class _WebRtmpStreamerBackend implements RtmpStreamerBackend {
   @override
   Future<bool> switchSource(RtmpSource source) async {
     if (source == RtmpSource.camera) return startPreviewCamera();
+    if (source == RtmpSource.combined) return _startCombinedPreview();
     return _guard(() async {
       final stream = await web.window.navigator.mediaDevices
           .getDisplayMedia(
@@ -216,6 +222,9 @@ class _WebRtmpStreamerBackend implements RtmpStreamerBackend {
   @override
   Future<bool> switchCamera() async {
     _frontCamera = !_frontCamera;
+    if (_source == RtmpSource.combined) {
+      return _replaceCombinedCamera();
+    }
     return startPreviewCamera();
   }
 
@@ -241,6 +250,7 @@ class _WebRtmpStreamerBackend implements RtmpStreamerBackend {
     await stopStream();
     _videoTrack?.stop();
     _audioTrack?.stop();
+    _stopCombinedSources();
     _videoTrack = null;
     _audioTrack = null;
     rtmpStreamerWebPreviewElement.srcObject = null;
@@ -276,6 +286,127 @@ class _WebRtmpStreamerBackend implements RtmpStreamerBackend {
     rtmpStreamerWebPreviewElement.srcObject = _previewStream;
     unawaited(rtmpStreamerWebPreviewElement.play().toDart);
     oldTrack?.stop();
+    if (source != RtmpSource.combined) {
+      _stopCombinedSources();
+    }
+  }
+
+  Future<bool> _startCombinedPreview() async {
+    return _guard(() async {
+      _stopCombinedSources();
+      final screenStream = await web.window.navigator.mediaDevices
+          .getDisplayMedia(
+            web.DisplayMediaStreamOptions(
+              video: true.toJS,
+              audio: false.toJS,
+            ),
+          )
+          .toDart;
+      final cameraStream = await web.window.navigator.mediaDevices
+          .getUserMedia(
+            web.MediaStreamConstraints(
+              audio: (_audioTrack == null).toJS,
+              video: _cameraConstraints,
+            ),
+          )
+          .toDart;
+      final screenTrack = screenStream.getVideoTracks().toDart.first;
+      final cameraTrack = cameraStream.getVideoTracks().toDart.first;
+      final audioTracks = cameraStream.getAudioTracks().toDart;
+      if (_audioTrack == null && audioTracks.isNotEmpty) {
+        _audioTrack = audioTracks.first;
+      }
+
+      final screenVideo = _createHiddenVideo(screenTrack);
+      final cameraVideo = _createHiddenVideo(cameraTrack);
+      final canvas = web.HTMLCanvasElement()
+        ..width = _settings.width
+        ..height = _settings.height;
+      final context = canvas.getContext('2d')! as web.CanvasRenderingContext2D;
+      final canvasTrack =
+          canvas.captureStream(_settings.fps).getVideoTracks().toDart.first;
+
+      _combinedScreenTrack = screenTrack;
+      _combinedCameraTrack = cameraTrack;
+      _combinedCanvasTrack = canvasTrack;
+      _combinedCameraVideo = cameraVideo;
+      screenTrack.onended = ((web.Event _) {
+        unawaited(startPreviewCamera());
+      }).toJS;
+
+      void drawFrame(num _) {
+        if (_combinedCanvasTrack != canvasTrack) return;
+        context.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
+        final overlayWidth = canvas.width * 0.25;
+        final videoRatio =
+            cameraVideo.videoWidth > 0 && cameraVideo.videoHeight > 0
+                ? cameraVideo.videoWidth / cameraVideo.videoHeight
+                : 16 / 9;
+        final overlayHeight = overlayWidth / videoRatio;
+        final margin = canvas.width * 0.02;
+        context.drawImage(
+          cameraVideo,
+          canvas.width - overlayWidth - margin,
+          canvas.height - overlayHeight - margin,
+          overlayWidth,
+          overlayHeight,
+        );
+        _combinedAnimationFrame =
+            web.window.requestAnimationFrame(drawFrame.toJS);
+      }
+
+      _combinedAnimationFrame =
+          web.window.requestAnimationFrame(drawFrame.toJS);
+      await _setVideoTrack(canvasTrack, source: RtmpSource.combined);
+      _emit('source_changed', _source.value);
+      return true;
+    });
+  }
+
+  Future<bool> _replaceCombinedCamera() async {
+    return _guard(() async {
+      final cameraStream = await web.window.navigator.mediaDevices
+          .getUserMedia(
+            web.MediaStreamConstraints(
+              audio: false.toJS,
+              video: _cameraConstraints,
+            ),
+          )
+          .toDart;
+      final cameraTrack = cameraStream.getVideoTracks().toDart.first;
+      final oldCameraTrack = _combinedCameraTrack;
+      _combinedCameraTrack = cameraTrack;
+      _combinedCameraVideo?.srcObject = web.MediaStream(
+        <web.MediaStreamTrack>[cameraTrack].toJS,
+      );
+      oldCameraTrack?.stop();
+      return true;
+    });
+  }
+
+  web.HTMLVideoElement _createHiddenVideo(web.MediaStreamTrack track) {
+    final video = web.document.createElement('video') as web.HTMLVideoElement
+      ..autoplay = true
+      ..muted = true
+      ..setAttribute('playsinline', 'true')
+      ..srcObject = web.MediaStream(<web.MediaStreamTrack>[track].toJS);
+    unawaited(video.play().toDart);
+    return video;
+  }
+
+  void _stopCombinedSources() {
+    final animationFrame = _combinedAnimationFrame;
+    if (animationFrame != null) {
+      web.window.cancelAnimationFrame(animationFrame);
+    }
+    _combinedAnimationFrame = null;
+    _combinedScreenTrack?.stop();
+    _combinedCameraTrack?.stop();
+    _combinedCanvasTrack?.stop();
+    _combinedScreenTrack = null;
+    _combinedCameraTrack = null;
+    _combinedCanvasTrack = null;
+    _combinedCameraVideo = null;
   }
 
   Future<void> _waitForIceGathering(

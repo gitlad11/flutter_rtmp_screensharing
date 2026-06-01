@@ -18,7 +18,7 @@ From pub.dev:
 
 ```yaml
 dependencies:
-  rtmpstreamer: ^0.2.0
+  rtmpstreamer: ^0.2.1
 ```
 
 From Git:
@@ -164,6 +164,15 @@ await RtmpStreamer.switchSource(RtmpSource.screen);
 ```
 
 Android will show the MediaProjection consent dialog. After approval, the native Android layer switches the active stream source from camera to screen sharing.
+
+On Web, show the shared screen with a camera overlay:
+
+```dart
+await RtmpStreamer.switchSource(RtmpSource.combined);
+```
+
+The combined source draws the shared screen and a camera overlay into a browser
+canvas, then publishes the canvas stream through WHIP. This source is Web-only.
 
 Switch back to camera:
 

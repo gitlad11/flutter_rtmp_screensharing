@@ -108,6 +108,12 @@ class _ExampleAppState extends State<ExampleApp> {
                   onPressed: () => RtmpStreamer.switchSource(RtmpSource.screen),
                   child: const Text('Screen'),
                 ),
+                if (kIsWeb)
+                  OutlinedButton(
+                    onPressed: () =>
+                        RtmpStreamer.switchSource(RtmpSource.combined),
+                    child: const Text('Combined'),
+                  ),
               ],
             ),
           ],

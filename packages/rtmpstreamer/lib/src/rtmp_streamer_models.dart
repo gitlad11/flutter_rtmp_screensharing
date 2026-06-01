@@ -69,7 +69,8 @@ class RtmpStreamSettings {
 
 enum RtmpSource {
   camera('camera'),
-  screen('screen');
+  screen('screen'),
+  combined('combined');
 
   const RtmpSource(this.value);
 

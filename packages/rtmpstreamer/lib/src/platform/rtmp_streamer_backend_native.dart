@@ -52,8 +52,14 @@ class _NativeRtmpStreamerBackend implements RtmpStreamerBackend {
   Future<void> stopStream() => _channel.invokeMethod<void>('stopStream');
 
   @override
-  Future<bool> switchSource(RtmpSource source) =>
-      _invokeBool('switchSource', source.value);
+  Future<bool> switchSource(RtmpSource source) {
+    if (source == RtmpSource.combined) {
+      return Future.error(
+        UnsupportedError('Combined screen and camera source is Web-only'),
+      );
+    }
+    return _invokeBool('switchSource', source.value);
+  }
 
   @override
   Future<bool> switchCamera() => _invokeBool('switchCamera');
