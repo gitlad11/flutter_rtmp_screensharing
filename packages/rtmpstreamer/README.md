@@ -1,13 +1,15 @@
 # rtmpstreamer
 
-Flutter Android RTMP streaming with camera preview and on-the-fly screen sharing.
+Flutter live streaming with camera preview and on-the-fly screen sharing.
 
-`rtmpstreamer` is built for Flutter apps that need RTMP live streaming with runtime switching between the camera and Android screen sharing. You can start a camera RTMP stream, keep the same RTMP session running, and switch to screen sharing through MediaProjection when the user needs to share the device screen.
+`rtmpstreamer` is built for Flutter apps that need live streaming with runtime
+switching between the camera and screen sharing. Android publishes RTMP through
+PedroSG94 RootEncoder. Web publishes WebRTC through a WHIP endpoint.
 
 Current platform support:
 
 ```text
-Android only
+Android and Web
 ```
 
 ## Install
@@ -16,7 +18,7 @@ From pub.dev:
 
 ```yaml
 dependencies:
-  rtmpstreamer: ^0.1.2
+  rtmpstreamer: ^0.2.0
 ```
 
 From Git:
@@ -56,6 +58,7 @@ maven { url 'https://jitpack.io' }
 ## Features
 
 - RTMP publishing from Flutter on Android.
+- WHIP publishing from Flutter Web.
 - Native camera preview widget.
 - Microphone audio capture.
 - On-the-fly switching from camera stream to screen sharing.
@@ -119,6 +122,14 @@ await RtmpStreamer.startPreviewCamera();
 await RtmpStreamer.startStream('rtmp://<host-ip>:1935/live/test');
 ```
 
+On Web, pass a WHIP endpoint instead:
+
+```dart
+await RtmpStreamer.startStream(
+  'http://localhost:8889/live/test/whip',
+);
+```
+
 Listen to events:
 
 ```dart
@@ -174,7 +185,7 @@ await RtmpStreamer.setCameraOrientation(
 For a quick local RTMP server with HLS playback:
 
 ```bash
-docker run --rm -p 1935:1935 -p 8888:8888 bluenviron/mediamtx:latest
+docker run --rm -p 1935:1935 -p 8888:8888 -p 8889:8889 -p 8189:8189/udp bluenviron/mediamtx:latest
 ```
 
 Publish URL:
@@ -196,6 +207,16 @@ rtmp://10.0.2.2:1935/live/test
 ```
 
 For a physical device, use the computer LAN IP.
+
+For Flutter Web:
+
+```text
+http://localhost:8889/live/test/whip
+```
+
+Camera and screen capture require a secure browser context. `localhost` works
+for local development. Production deployments should use HTTPS. Cross-origin
+WHIP publishing also requires the media server to allow the web app origin.
 
 ## Native Android API
 
@@ -219,7 +240,8 @@ PreviewSurfaceHolder
 
 ## Limitations
 
-- Android only.
+- Android RTMP and Web WHIP use different transports behind the same Dart API.
+- iOS is not supported yet.
 - RTMP protocol internals are currently handled by PedroSG94 RootEncoder.
 - Raw/chunk APIs are available in the Android layer; Dart-facing raw frame streaming is not exposed yet.
 - Chunked capture returns encoded frame chunks, not muxed `.flv`/`.mp4` files yet.

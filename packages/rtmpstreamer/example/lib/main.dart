@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rtmpstreamer/rtmpstreamer.dart';
 
 void main() {
@@ -14,7 +15,9 @@ class ExampleApp extends StatefulWidget {
 
 class _ExampleAppState extends State<ExampleApp> {
   final _urlController = TextEditingController(
-    text: 'rtmp://<host-ip>:1935/live/test',
+    text: kIsWeb
+        ? 'http://localhost:8889/live/test/whip'
+        : 'rtmp://<host-ip>:1935/live/test',
   );
 
   String _status = 'Idle';
@@ -26,9 +29,14 @@ class _ExampleAppState extends State<ExampleApp> {
     RtmpStreamer.events.listen((event) {
       if (!mounted) return;
       setState(() {
-        _status = event.message == null ? event.type : '${event.type}: ${event.message}';
-        if (event.type == 'connected' || event.type == 'started') _isLive = true;
-        if (event.type == 'stopped' || event.type == 'disconnected' || event.type == 'failed') {
+        _status = event.message == null
+            ? event.type
+            : '${event.type}: ${event.message}';
+        if (event.type == 'connected' || event.type == 'started')
+          _isLive = true;
+        if (event.type == 'stopped' ||
+            event.type == 'disconnected' ||
+            event.type == 'failed') {
           _isLive = false;
         }
       });
@@ -74,7 +82,7 @@ class _ExampleAppState extends State<ExampleApp> {
             TextField(
               controller: _urlController,
               decoration: const InputDecoration(
-                labelText: 'RTMP URL',
+                labelText: kIsWeb ? 'WHIP URL' : 'RTMP URL',
                 border: OutlineInputBorder(),
               ),
             ),

@@ -1,3 +1,12 @@
+## 0.2.0
+
+- Added Web implementation.
+- Add Web camera and microphone capture.
+- Add Web screen sharing and camera switching.
+- Add Web HTML video preview.
+- Add Web WHIP publishing for servers such as MediaMTX.
+- Keep the existing Dart API and select the backend by platform.
+
 ## 0.1.2
 
 - Preserve the configured aspect ratio in the native Android camera preview.
