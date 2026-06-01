@@ -12,6 +12,10 @@ Current platform support:
 Android and Web
 ```
 
+## Contact
+
+For questions and feedback: efimovi420@gmail.com
+
 ## Install
 
 From pub.dev:
